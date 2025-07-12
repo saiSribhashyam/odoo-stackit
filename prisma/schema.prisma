@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String     @id @default(cuid())
+  username      String     @unique
+  email         String     @unique
+  passwordHash  String
+  role          Role       @default(USER)
+  questions     Question[]
+  answers       Answer[]
+  votes         Vote[]
+  notifications Notification[]
+  comments      Comment[]
+  createdAt     DateTime   @default(now())
+}
+
+model Question {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    // Stored as rich text (HTML/JSON)
+  tags        QuestionTag[] 
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  answers     Answer[]
+  comments    Comment[]
+  createdAt   DateTime  @default(now())
+  acceptedId  String?   // ID of accepted answer
+}
+
+model Answer {
+  id         String    @id @default(cuid())
+  content    String    // Rich text
+  question   Question  @relation(fields: [questionId], references: [id])
+  questionId String
+  author     User      @relation(fields: [authorId], references: [id])
+  authorId   String
+  votes      Vote[]
+  comments   Comment[]
+  createdAt  DateTime  @default(now())
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  content    String
+  author     User     @relation(fields: [authorId], references: [id])
+  authorId   String
+  question   Question? @relation(fields: [questionId], references: [id])
+  questionId String?
+  answer     Answer?   @relation(fields: [answerId], references: [id])
+  answerId   String?
+  createdAt  DateTime  @default(now())
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  answer    Answer   @relation(fields: [answerId], references: [id])
+  answerId  String
+  value     Int      // +1 for upvote, -1 for downvote
+  createdAt DateTime @default(now())
+
+  @@unique([userId, answerId]) // Prevent duplicate votes
+}
+
+model Tag {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  questions  QuestionTag[]
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  recipient  User     @relation(fields: [recipientId], references: [id])
+  recipientId String
+  type       String   // "answer", "comment", "mention"
+  content    String   // Short message
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model QuestionTag {
+  id         String   @id @default(cuid())
+  question   Question @relation(fields: [questionId], references: [id])
+  questionId String
+  tag        Tag      @relation(fields: [tagId], references: [id])
+  tagId      String
+
+  @@unique([questionId, tagId]) // Prevent duplicate tags
+}
