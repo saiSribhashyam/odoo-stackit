@@ -23,7 +23,9 @@ model User {
   id            String     @id @default(cuid())
   username      String     @unique
   email         String     @unique
-  passwordHash  String
+  firstName     String?
+  lastName      String?
+  imageUrl      String?
   role          Role       @default(USER)
   questions     Question[]
   answers       Answer[]
